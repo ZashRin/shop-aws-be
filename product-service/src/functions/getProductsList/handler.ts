@@ -6,7 +6,11 @@ import schema from "./schema";
 
 export function createHandler(getProductRepository: () => ProductRepository) {
   const getProductsList: ValidatedEventAPIGatewayProxyEvent<typeof schema> =async () => {
-    return formatJSONResponse(await getProductRepository().getAll());
+    try {
+      return formatJSONResponse(await getProductRepository().getAll());
+    } catch (error) {
+      return formatJSONResponse({ message: "Unknown error" }, 500);
+    }
   }
   return getProductsList;
 }

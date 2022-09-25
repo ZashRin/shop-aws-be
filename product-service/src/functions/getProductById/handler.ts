@@ -13,7 +13,7 @@ export function createHandler(getProductRepository: () => ProductRepository) {
       if(error instanceof EntityNotFoundError) {
         return formatJSONResponse({ message: error.message }, 404);
       }
-      throw error;
+      return formatJSONResponse({ message: "Unknown error" }, 500);
     }
   };
   return getProductById;
