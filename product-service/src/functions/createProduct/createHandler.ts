@@ -16,7 +16,8 @@ export function createHandler(
 			getLogger().log(event);
 
 			return formatJSONResponse(
-				await getProductRepository().create(event.body)
+				await getProductRepository().create(event.body),
+				201
 			);
 		} catch (error) {
 			return formatJSONResponse({ message: "Unknown error" }, 500);
