@@ -4,14 +4,21 @@
   "description": "Serverless aws nodejs typescript service",
   "main": "serverless.ts",
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "local:build": "docker-compose build",
+    "local:up": "docker-compose up",
+    "local:stop": "docker-compose stop",
+    "local:start": "docker-compose start",
+    "local:down": "docker-compose down",
+    "run:entry": "ts-node"
   },
   "engines": {
     "node": ">=14.15.0"
   },
   "dependencies": {
     "@middy/core": "^2.5.3",
-    "@middy/http-json-body-parser": "^2.5.3"
+    "@middy/http-json-body-parser": "^2.5.3",
+    "pg": "^8.8.0"
   },
   "devDependencies": {
     "@babel/cli": "^7.18.10",
@@ -22,6 +29,7 @@
     "@types/aws-lambda": "^8.10.71",
     "@types/jest": "^29.0.3",
     "@types/node": "^14.14.25",
+    "@types/pg": "^8.6.5",
     "babel-jest": "^29.0.3",
     "esbuild": "^0.14.11",
     "jest": "^29.0.3",
