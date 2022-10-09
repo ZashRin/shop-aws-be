@@ -1,1 +1,1 @@
-export { default as createUrlForImport } from './createUrlForImport';
+export { default as importProductsFile } from './importProductsFile';

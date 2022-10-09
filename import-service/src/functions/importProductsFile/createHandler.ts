@@ -14,7 +14,7 @@ export function createHandler({
 	bucketName: string;
 	expiresIn: number;
 }) {
-	const createUrlForImport: ValidatedEventAPIGatewayProxyEvent<
+	const importProductsFile: ValidatedEventAPIGatewayProxyEvent<
 		typeof schema
 	> = async (event) => {
 		try {
@@ -42,5 +42,5 @@ export function createHandler({
 		}
 	};
 
-	return createUrlForImport;
+	return importProductsFile;
 }
