@@ -1,8 +1,11 @@
 import type { AWS } from "@serverless/typescript";
 
 import importProductsFile from "@functions/importProductsFile";
+import importFileParser from "@functions/importFileParser";
 
-import config from "./config.json";
+import { getConfig } from "@libs/getConfig";
+
+const config = getConfig();
 
 const serverlessConfiguration: AWS = {
 	service: "import-service",
@@ -23,7 +26,17 @@ const serverlessConfiguration: AWS = {
 		iamRoleStatements: [
 			{
 				Effect: "Allow",
-				Action: "S3:*",
+				Action: "s3:*",
+				Resource: {
+					"Fn::Join": [
+						"",
+						[{ "Fn::GetAtt": ["ImportedFilesBucket", "Arn"] }, ""],
+					],
+				},
+			},
+			{
+				Effect: "Allow",
+				Action: "s3:*",
 				Resource: {
 					"Fn::Join": [
 						"",
@@ -34,7 +47,7 @@ const serverlessConfiguration: AWS = {
 		],
 	},
 	// import the function via paths
-	functions: { importProductsFile },
+	functions: { importProductsFile, importFileParser },
 	package: { individually: true },
 	custom: {
 		esbuild: {
@@ -60,7 +73,6 @@ const serverlessConfiguration: AWS = {
 								AllowedHeaders: ["*"],
 								AllowedMethods: ["PUT"],
 								AllowedOrigins: ["*"],
-								ExposeHeaders: [],
 							},
 						],
 					},
