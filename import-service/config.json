@@ -1,5 +1,5 @@
 {
-  "BUCKET_NAME": "shop-aws-be-vvs-import-produts-from-csv",
+  "BUCKET_NAME": "shop-aws-be-import-produts-from-csv",
   "REGION": "us-east-1",
   "UPLOAD_FOLDER_NAME": "uploaded",
   "PARSED_FOLDER_NAME": "parsed",
