@@ -5,7 +5,8 @@ import { ProductRepository } from '@repositories/product/types';
 import { APIGatewayProxyResult, Context } from 'aws-lambda';
 import { Product } from 'src/types/Product';
 import { mock, instance, when } from "ts-mockito";
-import { createHandler } from "./handler";
+import { createHandler } from "./createHandler";
+import { Logger } from "@libs/logger/types";
 
 describe("getProductById", () => {
   const products: Product[] = [
@@ -14,6 +15,7 @@ describe("getProductById", () => {
       description: 'description',
       title: 'title',
       price: 1,
+      count: 1,
     },
   ];
 
@@ -27,7 +29,7 @@ describe("getProductById", () => {
         const productRepositoryMock = mock<ProductRepository>();
         when(productRepositoryMock.getById(product.id)).thenResolve(product);
 
-        const handler = createHandler(() => instance(productRepositoryMock));
+        const handler = createHandler(() => instance(productRepositoryMock), () => instance(mock<Logger>()));
 
         const eventMock = createEventMock();
         when(eventMock.pathParameters).thenReturn({ id: product.id });
@@ -55,7 +57,7 @@ describe("getProductById", () => {
         const productRepositoryMock = mock<ProductRepository>();
         when(productRepositoryMock.getById(product.id)).thenReject(new EntityNotFoundError());
   
-        const handler = createHandler(() => instance(productRepositoryMock));
+        const handler = createHandler(() => instance(productRepositoryMock), () => instance(mock<Logger>()));
   
         const eventMock = createEventMock();
         when(eventMock.pathParameters).thenReturn({ id: product.id });
