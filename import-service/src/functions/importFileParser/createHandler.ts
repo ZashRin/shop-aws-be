@@ -1,104 +1,91 @@
-import { S3 } from "aws-sdk";
+import { S3, SQS } from "aws-sdk";
 import { formatJSONResponse } from "@libs/api-gateway";
 import { S3Event } from "aws-lambda";
 import csvParser from "csv-parser";
+import { Readable } from "stream";
+
+function processRecordsFromStream(
+  stream: Readable,
+  processRecord: (record: Record<string, unknown>) => Promise<void>
+) {
+  const recordProcessingPromises: Promise<void>[] = [];
+  stream.on("data", (data) => {
+    recordProcessingPromises.push(processRecord(data));
+  });
+
+  return new Promise<void>((resolve, reject) => {
+    stream
+      .on("end", async () => {
+        await Promise.allSettled(recordProcessingPromises);
+        resolve();
+      })
+      .on("error", reject);
+  });
+}
 
 export function createHandler({
-	getS3Instance,
-	uploadFolderName,
-	parsedForlderName,
+  getS3Instance,
+  getSQSInstance,
+  queueUrl,
 }: {
-	getS3Instance: () => S3;
-	uploadFolderName: string;
-	parsedForlderName: string;
+  getS3Instance: () => S3;
+  getSQSInstance: () => SQS;
+  queueUrl: string;
 }) {
-	const importFileParser = async (event: S3Event) => {
-		try {
-			const s3Instance = getS3Instance();
+  const importFileParser = async (event: S3Event) => {
+    try {
+      const s3Instance = getS3Instance();
+      const sqsIntance = getSQSInstance();
 
-			const fileRecords = event.Records.filter(
-				(record) => !!record.s3.object.size
-			);
+      console.log(`START Product parsing ${JSON.stringify(event)}`);
 
-			for (const record of fileRecords) {
-				const {
-					s3: {
-						bucket: { name: bucketName },
-						object: { key: objectKey },
-					},
-				} = record;
+      const fileRecords = event.Records.filter(
+        (record) => !!record.s3.object.size
+      );
 
-				console.log(`
-					RECORD\n
-					${JSON.stringify({
-						Bucket: bucketName,
-						CopySource: objectKey,
-						Key: objectKey.replace(uploadFolderName, parsedForlderName),
-					})}
-					\n
-					${JSON.stringify({ Bucket: bucketName, Key: objectKey })}
-					\n
-				`);
+      const fileRecordProcessing = fileRecords.map(
+        ({
+          s3: {
+            bucket: { name: bucketName },
+            object: { key: objectKey },
+          },
+        }) => {
+          const productParsingStream = s3Instance
+            .getObject({ Bucket: bucketName, Key: objectKey })
+            .createReadStream()
+            .pipe(csvParser());
 
-				const objectReadStream = s3Instance
-					.getObject({ Bucket: bucketName, Key: objectKey })
-					.createReadStream();
-				const csvParsingStream = objectReadStream.pipe(csvParser());
+          return processRecordsFromStream(
+            productParsingStream,
+            async (product) => {
+              await sqsIntance
+                .sendMessage({
+                  QueueUrl: queueUrl,
+                  MessageBody: JSON.stringify(product),
+                })
+                .promise();
+            }
+          );
+        }
+      );
 
-				await new Promise((resolve, reject) => {
-					csvParsingStream
-						.on("data", (data) => {
-							console.log(
-								JSON.stringify({
-									Bucket: bucketName,
-									Key: objectKey,
-									ParsedRow: data,
-								})
-							);
-						})
-						.on("end", resolve)
-						.on("error", reject);
-				});
-
-				await s3Instance
-					.copyObject(
-						{
-							Bucket: bucketName,
-							CopySource: objectKey,
-							Key: objectKey.replace(uploadFolderName, parsedForlderName),
-						},
-						() => {}
-					)
-					.promise();
-				await s3Instance
-					.deleteObject({ Bucket: bucketName, Key: objectKey })
-					.promise();
-			}
-
-			return formatJSONResponse(
-				{
-					message: "Files were successfully moved",
-				},
-				202
-			);
-		} catch (error) {
-			console.log(`
-				ERROR\n
-				${error.message}
-				\n
+      await Promise.allSettled(fileRecordProcessing);
+      return formatJSONResponse({
+        message: "Products parsed",
+      });
+    } catch (error) {
+      console.log(`
+				ERROR ${error.message}\n
 				${JSON.stringify(error)}
-				\n
-				ERROR END
-				\n
 			`);
-			return formatJSONResponse(
-				{
-					message: "Unknown error",
-				},
-				500
-			);
-		}
-	};
+      return formatJSONResponse(
+        {
+          message: "Unknown error",
+        },
+        500
+      );
+    }
+  };
 
-	return importFileParser;
+  return importFileParser;
 }
