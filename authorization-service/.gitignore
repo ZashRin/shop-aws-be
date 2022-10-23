@@ -8,12 +8,4 @@ jspm_packages
 # esbuild directories
 .esbuild
 
-src/local.ts
-
-envConfig.json
-envConfig.local.json
-
-vpcConfig.json
-
-snsConfig.json
-sqsConfig.json
+authConfig.json
